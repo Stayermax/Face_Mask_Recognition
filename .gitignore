@@ -1,0 +1,7 @@
+.idea/
+.directory
+.hw2_data.zip
+test.tar
+train.tar
+train/
+test/
