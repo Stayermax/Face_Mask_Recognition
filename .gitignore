@@ -7,7 +7,7 @@ train.tar
 train/
 test/
 checkpoints/*
-checkpoints/ordered_checkpoints/
+checkpoints/ordered_checkpoints/*
 my_examples/
 saves/
 094295_HW2.pdf
