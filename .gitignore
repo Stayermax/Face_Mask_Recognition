@@ -3,7 +3,7 @@
 checkpoints/*
 checkpoints/ordered_checkpoints/*
 my_examples/
-results/
+results/*
 test/
 train/
 train_sorted/
