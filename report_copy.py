@@ -1,9 +1,3 @@
-# from pytorch_lightning.logging.neptune import NeptuneLogger
-#
-# neptune_logger = NeptuneLogger(
-#     api_key="ANONYMOUS",
-#     project_name="shared/pytorch-lightning-integration")
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -102,12 +96,39 @@ def DF_creation(path_to_folder='train', load_save = True):
     path_to_pkl = f'saves/{df_file}'
     return df, path_to_pkl
 
-train_df, path_to_train_pkl = DF_creation('train')
-print(train_df.head())
-test_df, path_to_test_pkl = DF_creation('test')
-print(test_df.head())
+# train_df, path_to_train_pkl = DF_creation('train')
+# print(train_df.head())
+# test_df, path_to_test_pkl = DF_creation('test')
+# print(test_df.head())
 
-
+def tmp_DF_creation(path_to_folder='train', load_save = True):
+    """
+    :param path_to_folder: 'train' or 'test'
+    :param load_save: if True load save (if exists), else creates files from scratch
+    :return:
+    """
+    if(path_to_folder[-1]== '/'):
+        path_to_folder = path_to_folder[:-1]
+    images_list = os.listdir(path_to_folder + '/')
+    df_file = ''
+    for el in path_to_folder.split('/'):
+        df_file += el + '_'
+    df_file +=  'df.pkl'
+    if ((df_file in os.listdir('tmp_saves/')) and load_save):
+        df = pickle.load(open(f'tmp_saves/{df_file}', "rb"))
+    else:
+        df = pd.DataFrame()
+        for image_name in images_list:
+            mask = 0
+            if ("_1." in image_name):
+                mask = 1
+            df = df.append({
+                'image': f'{path_to_folder}/' + image_name,
+                'mask': mask
+            }, ignore_index=True)
+        pickle.dump(df, open(f'tmp_saves/{df_file}', "wb"))
+    path_to_pkl = f'tmp_saves/{df_file}'
+    return df, path_to_pkl
 
 # ========================= Results Data
 
@@ -384,6 +405,7 @@ def train(EPOCHS = 20):
                       checkpoint_callback=checkpoint_callback,
                       default_root_dir='checkpoints/',
                       row_log_interval=40,
+                      resume_from_checkpoint='best_models/lightning_best_2.ckpt',
                       profiler=True)
 
     trainer.fit(model)
@@ -420,19 +442,21 @@ def test(path_to_test_folder='test', delete_pkl = False):
                       checkpoint_callback=checkpoint_callback,
                       profiler=True,
                       default_root_dir='checkpoints/',
-                      resume_from_checkpoint='best_models/lightning_best.ckpt',
+                      resume_from_checkpoint='best_models/lightning_best_2.ckpt',
                       row_log_interval=40
                       )
     trainer.fit(model)
+    # from torchsummary import summary
+    # summary(model, (3, 100, 100))
     trainer.test()
 
     prediction_df = prediction_df.drop('real_mask', axis=1)
     # prediction_df.to_csv('predictions.csv', header=False, index=False)
-    prediction_df.to_csv('predictions.csv', header=True, index=False)
+    prediction_df.to_csv('prediction.csv', header=True, index=False)
     if(delete_pkl):
         os.remove(path_to_test_pkl)
 
-def show_test_results(EPOCHS = 20):
+def show_test_results(EPOCHS = 20, checkpoints_directory='checkpoints/ordered_checkpoints/'):
     global test_results
     model = MaskDetector(Path('saves/train_df.pkl'), Path('saves/test_df.pkl'), only_testing=True)
     checkpoint_callback = ModelCheckpoint(
@@ -449,7 +473,7 @@ def show_test_results(EPOCHS = 20):
                           checkpoint_callback=checkpoint_callback,
                           profiler=True,
                           default_root_dir='checkpoints/',
-                          resume_from_checkpoint=f'checkpoints/ordered_checkpoints/epoch={i}.ckpt',
+                          resume_from_checkpoint=f'{checkpoints_directory}/epoch={i}.ckpt',
                           row_log_interval=40
                           )
         trainer.fit(model)
@@ -457,5 +481,72 @@ def show_test_results(EPOCHS = 20):
     test_results.to_csv('results/test_results.csv', header=True, index=False)
     print(f'RESULTS: {test_results}')
 
+def results_graphs():
+    train_df = pd.read_csv('graph_data/train_results.csv')
+    test_df = pd.read_csv('graph_data/test_results.csv')
+    # LOSS:
+    sns.set_style("darkgrid", {"axes.facecolor": ".9"})
+    train_loss = sns.lineplot(x=range(len(train_df)), y='loss', data=train_df, label="Train")
+    test_loss = sns.lineplot(x=range(len(test_df)), y='loss', data=test_df, label="Test")
+    plt.show()
+    # AUC:
+    train_auc = sns.lineplot(x=range(len(train_df)), y='ROC_AUC', data=train_df, label="Train")
+    test_auc = sns.lineplot(x=range(len(test_df)), y='ROC_AUC', data=test_df, label="Test")
+    plt.show()
+    # F1-score:
+    train_auc = sns.lineplot(x=range(len(train_df)), y='f1_score', data=train_df, label="Train")
+    test_auc = sns.lineplot(x=range(len(test_df)), y='f1_score', data=test_df, label="Test")
+    plt.show()
+
+def prediction_test(path_to_test_folder='test', delete_pkl = True):
+    global prediction_df
+
+    if (path_to_test_folder[-1] == '/'):
+        path_to_test_folder = path_to_test_folder[:-1]
+
+    pkl_name = ''
+    for el in path_to_test_folder.split('/'):
+        pkl_name += el + '_'
+    pkl_name += 'df.pkl'
+
+    if(f'{pkl_name}' in os.listdir('tmp_saves/')):
+        path_to_test_pkl = f'tmp_saves/{pkl_name}'
+        model = MaskDetector(Path('saves/train_df.pkl'), Path(path_to_test_pkl), epoch = 0, only_testing=True)
+    else:
+        test_df, path_to_test_pkl = tmp_DF_creation(path_to_test_folder, load_save = False)
+        model = MaskDetector(Path('saves/train_df.pkl'), Path(path_to_test_pkl), epoch=0, only_testing=True)
+
+    checkpoint_callback = ModelCheckpoint(
+        # filepath='checkpoints/_ckpt_epoch_20.ckpt',
+        save_weights_only=True,
+        save_top_k=0,
+        verbose=True,
+        monitor='val_acc',
+        mode='max'
+    )
+    trainer = Trainer(gpusSize=1 if torch.cuda.is_available() else 0,
+                      max_epochs=0,
+                      checkpoint_callback=checkpoint_callback,
+                      profiler=True,
+                      default_root_dir='checkpoints/',
+                      resume_from_checkpoint='best_models/lightning_best_2.ckpt',
+                      row_log_interval=40
+                      )
+    trainer.fit(model)
+    trainer.test()
+
+    prediction_df = prediction_df.drop('real_mask', axis=1)
+
+    if(delete_pkl):
+        os.remove(path_to_test_pkl)
+
+    result = prediction_df.copy()
+    result.rename(columns={'image': 'id', 'predicted_mask':'label'},inplace=True)
+    return result
+
 if __name__ == '__main__':
-    test('strange/my_examples/', True)
+    # pass
+    train(60)
+    # test()
+    # show_test_results(40, 'checkpoints/lightning_logs/version_56/checkpoints/')
+    # results_graphs()

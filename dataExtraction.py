@@ -1,34 +1,16 @@
-""" Dataset module
-"""
-import cv2
-from torch import long, tensor
-from torch.utils.data.dataset import Dataset
-from torchvision.transforms import Compose, Resize, ToPILImage, ToTensor
+import os
+import shutil
+# print(len(os.listdir('train/')))
+def sort_data():
+    for i, img_name in enumerate(os.listdir('train/')):
+        if(i%100==0):
+            print(f'DONE {i} out of {len(os.listdir("train/"))}')
+        if('_0.' in img_name):
+            shutil.copy(f'train/{img_name}', 'train_sorted/no_mask/')
+        else:
+            shutil.copy(f'train/{img_name}', 'train_sorted/mask/')
 
+sort_data()
 
-class MaskDataset(Dataset):
-    """ Masked faces dataset
-        0 = 'no mask'
-        1 = 'mask'
-    """
-    def __init__(self, dataFrame):
-        self.dataFrame = dataFrame
-
-        self.transformations = Compose([
-            ToPILImage(),
-            Resize((100, 100)),
-            ToTensor(), # [0, 1]
-        ])
-
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            raise NotImplementedError('slicing is not supported')
-
-        row = self.dataFrame.iloc[key]
-        return {
-            'image': self.transformations(cv2.imread(row['image'])),
-            'mask': tensor([row['mask']], dtype=long), # pylint: disable=not-callable
-        }
-
-    def __len__(self):
-        return len(self.dataFrame.index)
+print(f"MASK:  {len(os.listdir('train_sorted/mask/'))}")
+print(f"NO MASK:  {len(os.listdir('train_sorted/no_mask/'))}")
