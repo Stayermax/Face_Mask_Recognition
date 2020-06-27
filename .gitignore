@@ -4,14 +4,11 @@ checkpoints/*
 checkpoints/ordered_checkpoints/*
 my_examples/
 results/*
-test/
-train/
+test
 train_sorted/
-
 .directory
 094295_HW2.pdf
 google_drive_links.txt
-
 .hw2_data.zip
 test.tar
 train.tar

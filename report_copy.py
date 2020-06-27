@@ -411,6 +411,30 @@ def train(EPOCHS = 20):
     trainer.fit(model)
     train_results.to_csv('results/train_results.csv', header=True, index=False)
 
+def print_summary():
+    global prediction_df
+    model = MaskDetector(Path('saves/train_df.pkl'), Path('saves/test_df.pkl'), epoch=0, only_testing=True)
+
+    checkpoint_callback = ModelCheckpoint(
+        # filepath='checkpoints/_ckpt_epoch_20.ckpt',
+        save_weights_only=True,
+        save_top_k=0,
+        verbose=True,
+        monitor='val_acc',
+        mode='max'
+    )
+    trainer = Trainer(gpusSize=1 if torch.cuda.is_available() else 0,
+                      max_epochs=0,
+                      checkpoint_callback=checkpoint_callback,
+                      profiler=True,
+                      default_root_dir='checkpoints/',
+                      resume_from_checkpoint='best_models/lightning_best_2.ckpt',
+                      row_log_interval=40
+                      )
+    trainer.fit(model)
+    from torchsummary import summary
+    summary(model, (3, 100, 100))
+
 def test(path_to_test_folder='test', delete_pkl = False):
     global prediction_df
 
@@ -543,6 +567,12 @@ def prediction_test(path_to_test_folder='test', delete_pkl = True):
     result = prediction_df.copy()
     result.rename(columns={'image': 'id', 'predicted_mask':'label'},inplace=True)
     return result
+
+def print_summary2():
+    file = open('model_descr2.txt', 'r')
+    for line in file:
+        print(line[:-1])
+
 
 if __name__ == '__main__':
     # pass

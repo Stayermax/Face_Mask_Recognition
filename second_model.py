@@ -48,8 +48,8 @@ def load_split_train_test(datadir, valid_size=.2):
                                              sampler=test_sampler, batch_size=64)
     return trainloader, testloader
 
-trainloader, testloader = load_split_train_test(data_dir, .2)
-print(trainloader.dataset.classes)
+# trainloader, testloader = load_split_train_test(data_dir, .2)
+# print(trainloader.dataset.classes)
 
 device = torch.device("cuda" if torch.cuda.is_available()
                       else "cpu")
@@ -57,10 +57,14 @@ device = torch.device("cuda" if torch.cuda.is_available()
 # model = torch.hub.load('pytorch/vision', 'mobilenet_v2', pretrained=False,
 #                        num_classes=2)  # change num_classes for the no.of classes
 # model = mobilenet_v2(pretrained=False, num_classes=2)  # change num_classes for the no.of classes
-model = torch.hub.load('pytorch/vision:v0.6.1', 'mobilenet_v2', pretrained=False, num_classes=2,force_reload=True)
-print(model)
-from torchsummary import summary
-summary(model,(3, 224, 224))
+# model = torch.hub.load('pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=False, num_classes=2,force_reload=True)
+# print(model)
+
+# def print_summary2():
+#     model = torch.hub.load('pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=False, num_classes=2, force_reload=True)
+#     from torchsummary import summary
+#     summary(model,(3, 224, 224))
+
 #
 # p_n = 0
 # for parameter in model.parameters():
